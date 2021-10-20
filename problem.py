@@ -70,11 +70,9 @@ class problem():
     # Phi = np.matmul(Phi,np.diag(1/np.sqrt(np.sum(np.abs(Phi)**2,axis=0))))
 
     w,v = np.linalg.eig( np.matmul( np.conj(Phi.T), Phi ) )
-    alpha = 0.5/max(np.abs(w))
 
-    # import pdb; pdb.set_trace()
-    self.alpha = np.float32(alpha)
-    self.alpha0 = np.float32(alpha)
+    self.alpha = np.float32(0.5/max(np.abs(w))) # amp ista
+    self.alpha0 = np.float32(1/max(np.abs(w))) # ampista net
     # self.Phi = np.float32(Phi)
     # self.A = np.float32(A)
     self.Phi = np.complex64(Phi)

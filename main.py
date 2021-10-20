@@ -671,7 +671,6 @@ def eval_net(method, Y, X, p, L, M, K):
       Xhat = Xhat_net[0].numpy() + 1j*Xhat_net[1].numpy()
   return Xhat
 
-
 def LMK_nets(method, data, Nsamp, Llist, Mlist, Klist, *args):
   
   M = 8
@@ -862,11 +861,10 @@ def cellfree_detection():
     # set_trace()
 
 def regular_detection():
-  M = 8
+  M = 4
   K = 3
   L = 12
-  Nsamp = 1000
-  Nap = 9
+  Nsamp = 10
   Yall, Xall, Zall, p = generate_data(Nsamp,L,M,K,'mmwave')
   methods = ['admm1','vampmmse'] + ['admm3','vampista']
   # methods = ['admm3','vampista']
@@ -888,6 +886,24 @@ def regular_detection():
     
     Dpfa[method] = Pfa
     Dpmd[method] = Pmd
+
+  methods = ['admm3','ampista']
+  for method in methods:
+    Xhat = eval_net(method, Yall, Xall, p, L, M, K)
+    Pfa = 0
+    Pmd = 0
+    # for nsamp in range(Nsamp):
+      # Y,X,Z = Yall[nsamp], Xall[nsamp], Zall[nsamp]
+
+    for xhat,x in zip(Xhat,Xall):
+      pfa, pmd, tt = detect(xhat, x)
+      Pfa += pfa/Nsamp
+      Pmd += pmd/Nsamp
+    
+    Dpfa[method+'_net'] = Pfa
+    Dpmd[method+'_net'] = Pmd
+
+  methods = ['admm3_net','ampista_net','admm3','vampista']
   for method in methods:
     # print(method)
     print('pfa = [')
@@ -895,12 +911,10 @@ def regular_detection():
     print('pmd = [')
     print(', '.join('{:.2e}'.format(p) for p in Dpmd[method]) + ']')
     print('plt.plot(np.log10(pfa),np.log10(pmd))')
-    # [print(p), print(',') for p in Pfa]
-    # [print(p), print(',') for p in Pmd]
-      # print(tt)
-    # plt.plot(np.log10(Dpfa[method]), np.log10(Dpmd[method]))
-  # plt.show()
-    # set_trace()
+    plt.plot(np.log10(Dpfa[method]), np.log10(Dpmd[method]))
+    # plt.plot((Dpfa[method]), (Dpmd[method]))
+  plt.legend(methods)
+  plt.show()
 
 def computeNMSE(E, Xall):
   Nsamp = Xall.shape[0]
@@ -913,7 +927,7 @@ def computeNMSE(E, Xall):
   return NMSE
 
 def main():
-  Nsamp = 300
+  Nsamp = 10
 
   data = np.load('./testdata/datadict.npy', allow_pickle=True).tolist()
   # lam_tradeoff('cvx','L', 'M', 'K')
@@ -953,8 +967,7 @@ def main():
 
   # for method in methods:
   #   NMSE_L[method], NMSE_M[method], NMSE_K[method] = LMK(method, data, Nsamp, Llist, Mlist, Klist)
-  methods = ['admm3']
-  methods = ['ampista']
+  methods = ['admm3']+['ampista']
 
   for method in methods:
     NMSE_L[method], NMSE_M[method], NMSE_K[method] = LMK_nets(method, data, Nsamp, Llist, Mlist, Klist)
@@ -999,6 +1012,6 @@ def gen_test_data():
 
 
 if __name__ == '__main__':
-  gen_test_data()
+  # gen_test_data()
   # main()
-  # regular_detection()
+  regular_detection()
