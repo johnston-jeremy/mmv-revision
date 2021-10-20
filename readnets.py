@@ -1,41 +1,11 @@
 import os
-
+import tensorflow as tf
 from problem import problem
 from pdb import set_trace
 import numpy as np
-
-params_list = [ (50,12,4,2*4,3,(4,1),2, 10),
-                (50,12,8,2*8,3,(8,1),2, 10), 
-                (50,12,12,2*12,3,(12,1),2, 10),
-                (50,12,16,2*16,3,(16,1),2, 10),
-                (50,12,8,2*8,4,(8,1),2, 10),
-                (50,12,8,2*8,5,(8,1),2, 10),
-                (50,12,8,2*8,6,(8,1),2, 10),
-                (50,12,8,2*8,7,(8,1),2, 10),
-                (50,12,8,2*8,8,(8,1),2, 10),
-                (50,12,8,2*8,3,(8,1),2, 0),
-                (50,12,8,2*8,3,(8,1),2, 5),
-                (50,12,8,2*8,3,(8,1),2, 15),
-                (50,12,8,2*8,3,(8,1),2, 20)]
-
-params_list = [(50, 4,8,2*8,3,(8,1),2, 10),
-               (50, 8,8,2*8,3,(8,1),2, 10),
-               (50, 16,8,2*8,3,(8,1),2, 10),
-               (50, 20,8,2*8,3,(8,1),2, 10)]
-
-# problem_list = [(problem(50,12,4,2*4,3,(4,1),2), 10),
-#                 (problem(50,12,8,2*8,3,(8,1),2), 10), 
-#                 (problem(50,12,12,2*12,3,(12,1),2), 10),
-#                 (problem(50,12,16,2*16,3,(16,1),2), 10),
-#                 (problem(50,12,8,2*8,4,(8,1),2), 10),
-#                 (problem(50,12,8,2*8,5,(8,1),2), 10),
-#                 (problem(50,12,8,2*8,6,(8,1),2), 10),
-#                 (problem(50,12,8,2*8,7,(8,1),2), 10),
-#                 (problem(50,12,8,2*8,8,(8,1),2), 10),
-#                 (problem(50,12,8,2*8,3,(8,1),2), 0),
-#                 (problem(50,12,8,2*8,3,(8,1),2), 5),
-#                 (problem(50,12,8,2*8,3,(8,1),2), 15),
-#                 (problem(50,12,8,2*8,3,(8,1),2), 20)]
+from ampistanet_reduced import AMPNet
+# from netcomplex import AMPNet
+import admmnet3
 
 def parse(x):
   words = []
@@ -104,3 +74,23 @@ def get_final_epoch(path):
     p = parse(c)
     if p[0] == 'Epoch=30':
       return c
+
+def loadnet(net, weights_path):
+  obj = net.load_weights(weights_path)
+  obj.expect_partial()
+  return net
+
+def gen_net(method, p, n):
+  # tf.keras.backend.set_floatx('float64')
+  if method == 'admm3':
+    print('ADMM3 Net')
+    p.sigma, p.mu, p.rho, p.taux, p.tauz = 6.9e-01, 1.0e-02, 2.0e+00, 1.4e-01, 7.2e-01
+    tf.keras.backend.set_floatx('float32')
+    return admmnet3.ADMMNet(p, n)
+  elif method == 'ampista':
+    print('AMP-ISTA Net')
+    p.lam = .1
+    p.damp_init = 0.6
+    tf.keras.backend.set_floatx('float32')
+    num_stages = {'amp':n, 'ista':5}
+    return AMPNet(p, num_stages)

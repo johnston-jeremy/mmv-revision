@@ -1,10 +1,11 @@
-from multiprocessing import set_start_method
 from readnets import get_numlayers,get_path,get_final_epoch, parse
 from ampistanet_reduced import AMPNet
 import admmnet3
 import tensorflow as tf
 from pdb import set_trace
 import numpy as np
+from problem import problem
+
 
 def get_params_list():
   params_list = [ (50,12,4,2*4,3,(4,1),2, 10),
@@ -21,19 +22,6 @@ def get_params_list():
                   (50, 16,8,2*8,3,(8,1),2, 10),
                   (50, 20,8,2*8,3,(8,1),2, 10)]
   return params_list                  
-def gen_net(method, p, n):
-  if method == 'admm3':
-    print('ADMM3 Net')
-    p.sigma, p.mu, p.rho, p.taux, p.tauz = 6.9e-01, 1.0e-02, 2.0e+00, 1.4e-01, 7.2e-01
-    tf.keras.backend.set_floatx('float32')
-    return admmnet3.ADMMNet(p, n)
-  elif method == 'ampista':
-    print('AMP-ISTA Net')
-    p.lam = .1
-    p.damp_init = 0.6
-    tf.keras.backend.set_floatx('float32')
-    num_stages = {'amp':n, 'ista':5}
-    return AMPNet(p, num_stages)
 
 def eval_via_nets():
 
@@ -49,8 +37,8 @@ def eval_via_nets():
   err = []
   pfapmd = []
   method_params = get_method_params()
-  # rootpath = '/Users/jeremyjohnston/Documents/mmv/nets/results/'
-  rootpath = '/Users/Jeremy/Documents/GitHub/mmv/nets/results/'
+  rootpath = './nets/results/'
+  # rootpath = '/Users/Jeremy/Documents/GitHub/mmv/nets/results/'
   # rootpath = '/Users/Jeremy/Documents/mmv/dunn/nets/results/'
   # rootpath = '/Users/Jeremy/Documents/mmv/isit_results/'
 
@@ -60,18 +48,6 @@ def eval_via_nets():
     N,L,M,Ng,K,Ntxrx,J,SNR = i[0]
     p = problem(*(N,L,M,Ng,K,Ntxrx,J))
     
-    for s in i[1]:
-      if parse(s)[0] != 'ampmmse':
-        break
-
-    finalepoch = get_final_epoch(rootpath + s)
-    p.A = np.load(rootpath + s + '/' + finalepoch + '/A.npy')
-    A = np.copy(p.A)
-    _, _, Ytest, Xtest = gen_data(p, Nsamp, Ntest, SNR)
-    Ytestc = Ytest[0] + 1j*Ytest[1]
-    Xtestc = Xtest[0] + 1j*Xtest[1]
-    np.save('./testdata/data_L='+str(L)+'_M='+str(M)+'_K='+str(K)+'_SNR='+str(SNR)+'.npy',{'Y':Ytest,'X':Xtest, 'p':p})
-
     err[-1]['N'] = N
     err[-1]['L'] = L
     err[-1]['M'] = M
@@ -85,6 +61,7 @@ def eval_via_nets():
     pfapmd[-1]['SNR'] = SNR
 
     for s in i[1]:
+      set_trace()
       s_parsed = parse(s)
       method = s_parsed[0]
       finalepoch = get_final_epoch(rootpath + s)
@@ -191,7 +168,5 @@ def extract_A():
 
   np.save('./Aall.npy', Aall)
   
-if __name__ == '__main__':
-  A = np.load('./Aall.npy', allow_pickle=True).tolist()
-  set_trace()
-  extract_A()
+# if __name__ == '__main__':
+#   set_trace()
