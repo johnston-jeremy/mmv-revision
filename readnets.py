@@ -38,7 +38,7 @@ def parse_SNR(x):
 
 def get_path(params):
   N,L,M,Ng,K,Ntxrx,J,SNR = params
-  X = os.listdir('/Users/jeremyjohnston/Documents/mmv_cvx/nets/results')
+  X = os.listdir('./nets/results')
   # X = os.listdir('/Users/Jeremy/Documents/GitHub/mmv_cvx/nets/results')
   # X = os.listdir('/Users/Jeremy/Documents/mmv-old/dunn/nets/results')
   # X = os.listdir('C:/Users/Jeremy/Documents/results_admm_ampista_3_25_21')
