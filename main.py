@@ -9,6 +9,8 @@ from problem import problem
 from pdb import set_trace
 from multiprocessing import Pool, Manager
 from workers import *
+from readnets import *
+import numpy.linalg as la
 
 def get_method_params():
   # N,L,M
@@ -593,17 +595,18 @@ def lam_tradeoff_2():
 
   plt.show()
   
-def LMK(method, data, *args):
+def LMK(method, data, Nsamp, Llist, Mlist, Klist, *args):
   
-  Llist = data['Llist']
-  Mlist = data['Mlist']
-  Klist = data['Klist']
+  # Llist = data['Llist']
+  # Mlist = data['Mlist']
+  # Klist = data['Klist']
   
   M = 8
   K = 3
   NMSE_L = []
   for L in Llist:
     Yall, Xall, Zall, p = data[(L,M,K)]
+    Yall, Xall, Zall = Yall[:Nsamp], Xall[:Nsamp], Zall[:Nsamp]
     E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
     NMSE = computeNMSE(E,Xall)
     print(NMSE)
@@ -615,6 +618,8 @@ def LMK(method, data, *args):
  
   for M in Mlist:
     Yall, Xall, Zall, p = data[(L,M,K)]
+    Yall, Xall, Zall = Yall[:Nsamp], Xall[:Nsamp], Zall[:Nsamp]
+
     E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
     NMSE = computeNMSE(E,Xall)
     print(NMSE)
@@ -625,6 +630,9 @@ def LMK(method, data, *args):
   NMSE_K = []
   for K in Klist:
     Yall, Xall, Zall, p = data[(L,M,K)]
+    Yall, Xall, Zall = Yall[:Nsamp], Xall[:Nsamp], Zall[:Nsamp]
+
+
     E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
     NMSE = computeNMSE(E,Xall)
     print(NMSE)
@@ -648,19 +656,31 @@ def LMK(method, data, *args):
     plt.show()
   return NMSE_L, NMSE_M, NMSE_K
 
-def LMK_nets(method, data, *args):
-  
-  Llist = data['Llist']
-  Mlist = data['Mlist']
-  Klist = data['Klist']
+def eval_net(method, Y, X, p, L, M, K):
+  rootpath = './nets/results/'
+  netrootfilenames = get_path((50,L,M,2*M,K,(M,1),2,10))
+  for s in netrootfilenames:
+    s_parsed = parse(s)
+    net_type = s_parsed[0]
+    if net_type == method:
+      finalepoch = get_final_epoch(rootpath + s)
+      n = int(get_numlayers(s_parsed[5]))
+      net = gen_net(method, p, n)
+      net = loadnet(net, rootpath + s + '/' + finalepoch + '/weights')
+      Xhat_net = net([Y.real, Y.imag])
+      Xhat = Xhat_net[0].numpy() + 1j*Xhat_net[1].numpy()
+  return Xhat
+
+
+def LMK_nets(method, data, Nsamp, Llist, Mlist, Klist, *args):
   
   M = 8
   K = 3
   NMSE_L = []
   for L in Llist:
     Yall, Xall, Zall, p = data[(L,M,K)]
-    E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
-    NMSE = computeNMSE(E,Xall)
+    Xhat = eval_net(method, Yall[:Nsamp], Xall[:Nsamp], p, L, M, K)
+    NMSE = 10*np.log10(np.mean((la.norm(Xhat-Xall[:Nsamp], axis=(1,2))/la.norm(Xall[:Nsamp], axis=(1,2)))**2))
     print(NMSE)
     NMSE_L.append(NMSE)
   
@@ -670,8 +690,8 @@ def LMK_nets(method, data, *args):
  
   for M in Mlist:
     Yall, Xall, Zall, p = data[(L,M,K)]
-    E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
-    NMSE = computeNMSE(E,Xall)
+    Xhat = eval_net(method, Yall[:Nsamp], Xall[:Nsamp], p, L, M, K)
+    NMSE = 10*np.log10(np.mean((la.norm(Xhat-Xall[:Nsamp], axis=(1,2))/la.norm(Xall[:Nsamp], axis=(1,2)))**2))
     print(NMSE)
     NMSE_M.append(NMSE)
 
@@ -680,8 +700,8 @@ def LMK_nets(method, data, *args):
   NMSE_K = []
   for K in Klist:
     Yall, Xall, Zall, p = data[(L,M,K)]
-    E = mp_samples(method, Yall, Xall, Zall, p, 'regular')
-    NMSE = computeNMSE(E,Xall)
+    Xhat = eval_net(method, Yall[:Nsamp], Xall[:Nsamp], p, L, M, K)
+    NMSE = 10*np.log10(np.mean((la.norm(Xhat-Xall[:Nsamp], axis=(1,2))/la.norm(Xall[:Nsamp], axis=(1,2)))**2))
     print(NMSE)
     NMSE_K.append(NMSE)
 
@@ -893,7 +913,6 @@ def computeNMSE(E, Xall):
   return NMSE
 
 def main():
-<<<<<<< HEAD
   Nsamp = 300
 
   data = np.load('./testdata/datadict.npy', allow_pickle=True).tolist()
@@ -950,9 +969,6 @@ def main():
 
 def gen_test_data():
   Nsamp = 300
-=======
-  Nsamp = 100
->>>>>>> parent of 054b80c... a
 
   data = {}
   # lam_tradeoff('cvx','L', 'M', 'K')
@@ -978,26 +994,11 @@ def gen_test_data():
     L = 12
     data[(L,M,K)] = generate_data(Nsamp,L,M,K,'mmwave')
 
+  np.save('./testdata/datadict.npy', data)
 
-  data['Llist'] = Llist
-  data['Mlist'] = Mlist
-  data['Klist'] = Klist
-
-  methods = ['admm1','admm3','vampmmse', 'vampista']
-  # methods = ['vampista']
-  # methods = ['admm1','vampmmse']
-  NMSE_L, NMSE_M, NMSE_K = {'var':'L'}, {'var':'M'}, {'var':'K'}
-  for method in methods:
-    NMSE_L[method], NMSE_M[method], NMSE_K[method] = LMK(method, data)
-
-  # for net in net
-  for n in [NMSE_L, NMSE_M, NMSE_K]:
-    print(n['var'])
-    for method in methods:
-      print(method, n[method])
-    
 
 
 if __name__ == '__main__':
+  # gen_test_data()
   main()
   # regular_detection()
